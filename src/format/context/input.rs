@@ -168,6 +168,7 @@ impl<'a> Iterator for PacketIter<'a> {
                 },
 
                 Err(Error::Eof) => return None,
+                Err(Error::Exit) => return None,
 
                 Err(..) => (),
             }
