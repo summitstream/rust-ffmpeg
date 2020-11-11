@@ -1,8 +1,11 @@
-use std::rc::Rc;
+use std::{mem, rc::Rc, slice};
 
-use super::{Context, Id};
+use crate::{format, Error};
+
+use super::{Context, Id, Profile};
 use ffi::*;
 use media;
+use ChannelLayout;
 
 pub struct Parameters {
     ptr: *mut AVCodecParameters,
@@ -41,6 +44,64 @@ impl Parameters {
 
     pub fn id(&self) -> Id {
         unsafe { Id::from((*self.as_ptr()).codec_id) }
+    }
+
+    #[inline]
+    pub fn extradata(&self) -> Option<&[u8]> {
+        unsafe {
+            if (*self.as_ptr()).extradata.is_null() {
+                None
+            } else {
+                Some(slice::from_raw_parts(
+                    (*self.as_ptr()).extradata,
+                    (*self.as_ptr()).extradata_size as usize,
+                ))
+            }
+        }
+    }
+
+    pub fn bit_rate(&self) -> usize {
+        unsafe { (*self.as_ptr()).bit_rate as usize }
+    }
+
+    pub fn profile(&self) -> Profile {
+        unsafe { Profile::from((self.id(), (*self.as_ptr()).profile)) }
+    }
+
+    pub fn level(&self) -> i32 {
+        unsafe { (*self.as_ptr()).level as i32 }
+    }
+
+    pub fn video(mut self) -> Result<Video, Error> {
+        match self.medium() {
+            media::Type::Unknown => {
+                unsafe {
+                    (*self.as_mut_ptr()).codec_type = media::Type::Video.into();
+                }
+
+                Ok(Video(self))
+            }
+
+            media::Type::Video => Ok(Video(self)),
+
+            _ => Err(Error::InvalidData),
+        }
+    }
+
+    pub fn audio(mut self) -> Result<Audio, Error> {
+        match self.medium() {
+            media::Type::Unknown => {
+                unsafe {
+                    (*self.as_mut_ptr()).codec_type = media::Type::Audio.into();
+                }
+
+                Ok(Audio(self))
+            }
+
+            media::Type::Audio => Ok(Audio(self)),
+
+            _ => Err(Error::InvalidData),
+        }
     }
 }
 
@@ -83,5 +144,49 @@ impl<C: AsRef<Context>> From<C> for Parameters {
             avcodec_parameters_from_context(parameters.as_mut_ptr(), context.as_ptr());
         }
         parameters
+    }
+}
+
+pub struct Video(pub Parameters);
+
+impl Video {
+    pub fn format(&self) -> format::Pixel {
+        unsafe {
+            format::Pixel::from(mem::transmute::<_, AVPixelFormat>(
+                (*self.0.as_ptr()).format,
+            ))
+        }
+    }
+
+    pub fn width(&self) -> u32 {
+        unsafe { (*self.0.as_ptr()).width as u32 }
+    }
+
+    pub fn height(&self) -> u32 {
+        unsafe { (*self.0.as_ptr()).height as u32 }
+    }
+}
+
+pub struct Audio(pub Parameters);
+
+impl Audio {
+    pub fn format(&self) -> format::Sample {
+        unsafe {
+            format::Sample::from(mem::transmute::<_, AVSampleFormat>(
+                (*self.0.as_ptr()).format,
+            ))
+        }
+    }
+
+    pub fn rate(&self) -> u32 {
+        unsafe { (*self.0.as_ptr()).sample_rate as u32 }
+    }
+
+    pub fn channel_layout(&self) -> ChannelLayout {
+        unsafe { ChannelLayout::from_bits_truncate((*self.0.as_ptr()).channel_layout) }
+    }
+
+    pub fn channels(&self) -> u16 {
+        unsafe { (*self.0.as_ptr()).channels as u16 }
     }
 }
