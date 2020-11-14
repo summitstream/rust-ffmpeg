@@ -130,6 +130,19 @@ impl Context {
         }
     }
 
+    /// Run the resampler from the given input.
+    ///
+    /// When there are internal frames to process it will return `Ok(Some(Delay { .. }))`.
+    pub fn insert(&mut self, input: &frame::Audio) -> Result<Option<Delay>, Error> {
+        unsafe {
+            match swr_convert_frame(self.as_mut_ptr(), ptr::null_mut(), input.as_ptr()) {
+                0 => Ok(self.delay()),
+
+                e => Err(Error::from(e)),
+            }
+        }
+    }
+
     /// Convert one of the remaining internal frames.
     ///
     /// When there are no more internal frames `Ok(None)` will be returned.
