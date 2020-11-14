@@ -1,4 +1,9 @@
-use std::{mem, rc::Rc, slice};
+use std::{
+    mem,
+    ops::{Deref, DerefMut},
+    rc::Rc,
+    slice,
+};
 
 use crate::{format, Error};
 
@@ -167,6 +172,22 @@ impl Video {
     }
 }
 
+impl Deref for Video {
+    type Target = Parameters;
+
+    #[inline(always)]
+    fn deref(&self) -> &<Self as Deref>::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Video {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut <Self as Deref>::Target {
+        &mut self.0
+    }
+}
+
 pub struct Audio(pub Parameters);
 
 impl Audio {
@@ -188,5 +209,21 @@ impl Audio {
 
     pub fn channels(&self) -> u16 {
         unsafe { (*self.0.as_ptr()).channels as u16 }
+    }
+}
+
+impl Deref for Audio {
+    type Target = Parameters;
+
+    #[inline(always)]
+    fn deref(&self) -> &<Self as Deref>::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Audio {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut <Self as Deref>::Target {
+        &mut self.0
     }
 }
