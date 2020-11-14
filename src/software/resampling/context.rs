@@ -103,6 +103,11 @@ impl Context {
         }
     }
 
+    /// Get the next pts.
+    pub fn next_pts(&self, in_pts: i64) -> i64 {
+        unsafe { swr_next_pts(self.as_ptr() as *mut _, in_pts) }
+    }
+
     /// Run the resampler from the given input to the given output.
     ///
     /// When there are internal frames to process it will return `Ok(Some(Delay { .. }))`.
