@@ -42,6 +42,6 @@ pub fn resampler(
     (out_format, out_layout, out_rate): (::format::Sample, ::ChannelLayout, u32),
 ) -> Result<resampling::Context, ::Error> {
     resampling::Context::get(
-        in_format, in_layout, in_rate, out_format, out_layout, out_rate,
+        in_format, in_layout, in_rate, out_format, out_layout, out_rate, 0,
     )
 }
